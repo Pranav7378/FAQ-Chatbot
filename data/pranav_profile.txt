@@ -1,0 +1,394 @@
+==================================================
+PRANAV SAI - PORTFOLIO KNOWLEDGE BASE
+For FAQ Chatbot
+==================================================
+
+PERSONAL INFORMATION
+
+Full Name:
+K. Chaitanya Pranav Sai Kodamasimham
+
+Professional Title:
+Junior AI Engineer
+
+Current Location:
+Hyderabad, Telangana, India
+
+Professional Summary:
+Pranav Sai is a Junior AI Engineer specializing in Machine Learning, Generative AI, Computer Vision, Large Language Models (LLMs), Retrieval-Augmented Generation (RAG), and enterprise AI systems.
+
+He focuses on building production-ready AI applications, scalable backend architectures, intelligent automation solutions, vector search systems, and real-time monitoring platforms. His experience spans both mission-critical aerospace software at ISRO and enterprise AI development at Sita Corp.
+
+He enjoys solving real-world problems through AI by combining software engineering principles with machine learning and modern LLM technologies.
+
+--------------------------------------------------
+ABOUT
+--------------------------------------------------
+
+Who is Pranav Sai?
+Pranav Sai is an AI Engineer passionate about designing production-ready AI systems, scalable APIs, intelligent automation solutions, and real-time software platforms.
+
+What is his primary expertise?
+- Machine Learning
+- Generative AI
+- Large Language Models (LLMs)
+- Retrieval-Augmented Generation (RAG)
+- Computer Vision
+- Backend Development
+- Real-Time Systems
+- Enterprise AI Solutions
+
+What industries has he worked in?
+- Aerospace (ISRO)
+- Enterprise AI
+- Intelligent Automation
+- Machine Learning Applications
+
+Career Goal:
+To become an expert AI Engineer building reliable, scalable production-grade AI systems that create measurable real-world impact.
+
+--------------------------------------------------
+EDUCATION
+--------------------------------------------------
+
+Degree:
+Bachelor of Technology (B.Tech)
+
+Branch:
+Computer Science & Engineering (Artificial Intelligence & Machine Learning)
+
+College:
+Mother Teresa Institute of Science and Technology, Sathupalli
+
+Graduation Year:
+2024
+
+Academic Performance:
+First Class with Distinction
+
+CGPA:
+7.51
+
+--------------------------------------------------
+CURRENT EXPERIENCE
+--------------------------------------------------
+
+Company:
+Sita Corp
+
+Role:
+Junior AI Engineer
+
+Location:
+Hyderabad, India
+
+Employment Status:
+Present
+
+Responsibilities:
+- Build enterprise AI applications
+- Develop Machine Learning systems
+- Design Generative AI solutions
+- Build RAG architectures
+- Develop scalable backend APIs
+- Create intelligent automation systems
+- Integrate LLMs with enterprise data
+- Develop vector database pipelines
+- Optimize AI workflows
+- Collaborate with engineering teams
+- Deliver production-ready AI solutions
+
+Technologies Used:
+- Python
+- FastAPI
+- Flask
+- LangChain
+- Vector Databases
+- LLMs
+- Machine Learning
+- Docker
+- Git
+- REST APIs
+
+--------------------------------------------------
+PREVIOUS EXPERIENCE
+--------------------------------------------------
+
+Organization:
+ISRO - Master Control Facility (MCF)
+
+Role:
+Graduate Apprentice Trainee
+
+Duration:
+July 2025 - May 2026
+
+Domain:
+Ground Systems & Aerospace Software
+
+Responsibilities:
+- Developed Python and Django backend systems
+- Worked on Monitoring & Control (M&C) software
+- Built telemetry processing utilities
+- Parsed binary telemetry packets
+- Worked with TCP/IP, UDP, SNMP and WebSockets
+- Supported software-hardware integration
+- Improved RF communication infrastructure
+- Enhanced system reliability and maintainability
+
+Key Technologies:
+- Python
+- Django
+- FastAPI
+- TCP/IP
+- UDP
+- SNMP
+- WebSockets
+- JWT
+- OAuth
+- HTML
+- CSS
+- JavaScript
+
+--------------------------------------------------
+ISRO AI PROJECT
+--------------------------------------------------
+
+Project:
+AI-Based Fire & Smoke Detection System
+
+Description:
+A real-time AI system developed for monitoring ISRO battery rooms to detect fire and smoke using Computer Vision.
+
+Key Features:
+- YOLO-based object detection
+- Real-time monitoring
+- Live video analysis
+- Instant alert generation
+- WebSocket communication
+- Secure backend APIs
+- Interactive dashboard
+
+Model Accuracy:
+87% Detection Accuracy
+
+Technologies:
+- YOLO
+- Computer Vision
+- FastAPI
+- Machine Learning
+- WebSockets
+- Python
+
+--------------------------------------------------
+TECHNICAL SKILLS
+--------------------------------------------------
+
+Programming Languages:
+- Python
+- JavaScript
+- SQL
+- HTML
+- CSS
+
+Artificial Intelligence:
+- Machine Learning
+- Generative AI
+- Large Language Models (LLMs)
+- Prompt Engineering
+- Retrieval-Augmented Generation (RAG)
+- Embeddings
+- Vector Search
+- LangChain
+- Computer Vision
+- YOLO
+
+Backend Development:
+- FastAPI
+- Django
+- Flask
+- REST APIs
+- JWT Authentication
+- OAuth
+
+Real-Time Systems:
+- WebSockets
+- TCP/IP
+- UDP
+- SNMP
+- Telemetry Processing
+
+Machine Learning Libraries:
+- scikit-learn
+- Pandas
+- NumPy
+
+DevOps & Tools:
+- Docker
+- Git
+- GitHub
+- VS Code
+
+Architecture:
+- System Design
+- API Development
+- Production AI Systems
+- Scalable Backend Design
+
+--------------------------------------------------
+FEATURED PROJECTS
+--------------------------------------------------
+
+Project:
+Crop Recommendation System
+
+Description:
+A machine learning application that recommends suitable crops based on environmental and agricultural conditions.
+
+Features:
+- Soil analysis
+- Weather-based recommendations
+- Farming parameter analysis
+
+Technologies:
+- Python
+- scikit-learn
+- Pandas
+- Streamlit
+
+--------------------------------------------------
+
+Project:
+Movie Recommendation System
+
+Description:
+An intelligent recommendation engine that suggests personalized movies using collaborative filtering and content-based recommendation techniques.
+
+Technologies:
+- Python
+- Pandas
+- scikit-learn
+- TMDB API
+
+--------------------------------------------------
+TECHNOLOGY STACK
+--------------------------------------------------
+
+AI & ML:
+- Machine Learning
+- Generative AI
+- LLMs
+- RAG
+- LangChain
+- Embeddings
+- Vector Databases
+
+Computer Vision:
+- YOLO
+- Image Detection
+- Object Detection
+
+Backend:
+- FastAPI
+- Django
+- Flask
+
+Real-Time Communication:
+- WebSockets
+- TCP/IP
+- UDP
+- SNMP
+
+Data:
+- Pandas
+- NumPy
+- Vector Databases
+
+Development:
+- Docker
+- Git
+- GitHub
+- VS Code
+
+--------------------------------------------------
+PROFESSIONAL INTERESTS
+--------------------------------------------------
+
+Interested In:
+- Artificial Intelligence
+- Machine Learning
+- Enterprise AI
+- LLM Applications
+- RAG Systems
+- Computer Vision
+- Intelligent Automation
+- AI Infrastructure
+- Backend Engineering
+- System Design
+- Real-Time Monitoring
+- Production AI Systems
+
+--------------------------------------------------
+CONTACT INFORMATION
+--------------------------------------------------
+
+Email:
+pranav.kodamasimham@gmail.com
+
+Phone:
++91 7416995636
+
+GitHub:
+https://github.com/Pranav7378
+
+LinkedIn:
+https://in.linkedin.com/in/kodamasimham-pranav-sai
+
+Portfolio:
+https://pranavs-cozy-corner.lovable.app
+
+--------------------------------------------------
+FREQUENTLY ASKED QUESTIONS
+--------------------------------------------------
+
+Q: Who is Pranav Sai?
+A: Pranav Sai is a Junior AI Engineer specializing in Machine Learning, Generative AI, LLMs, RAG systems, Computer Vision, and enterprise AI development.
+
+Q: Where does Pranav currently work?
+A: He currently works as a Junior AI Engineer at Sita Corp in Hyderabad.
+
+Q: Did Pranav work at ISRO?
+A: Yes. He completed a Graduate Apprentice Traineeship at ISRO's Master Control Facility (MCF), working on aerospace software, telemetry processing, and AI-based monitoring systems.
+
+Q: What AI technologies does he specialize in?
+A: Machine Learning, Generative AI, Large Language Models (LLMs), Retrieval-Augmented Generation (RAG), LangChain, Computer Vision, YOLO, and Vector Databases.
+
+Q: Which backend frameworks does he use?
+A: FastAPI, Django, and Flask.
+
+Q: What programming language does he primarily use?
+A: Python.
+
+Q: Does he build production AI systems?
+A: Yes. His focus is designing and deploying scalable, production-ready AI applications for enterprise use.
+
+Q: What computer vision project did he build?
+A: An AI-powered Fire & Smoke Detection System for ISRO battery rooms using YOLO, achieving 87% detection accuracy.
+
+Q: What are his featured projects?
+A:
+- Crop Recommendation System
+- Movie Recommendation System
+
+Q: What databases or retrieval technologies does he use?
+A: Vector Databases, embeddings, and Retrieval-Augmented Generation (RAG) pipelines.
+
+Q: What communication protocols has he worked with?
+A: TCP/IP, UDP, SNMP, and WebSockets.
+
+Q: Is he open to new opportunities?
+A: Yes. He is open to discussing AI projects, collaborations, and professional opportunities.
+
+==================================================
+END OF KNOWLEDGE BASE
+==================================================
