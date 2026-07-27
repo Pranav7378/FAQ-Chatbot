@@ -10,3 +10,4 @@ numpy
 pypdf2
 langchain-groq
 python-dotenv
+langchain-text-splitters
