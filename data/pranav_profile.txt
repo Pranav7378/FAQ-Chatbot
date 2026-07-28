@@ -124,11 +124,10 @@ Duration:
 July 2025 - May 2026
 
 Domain:
-Ground Systems & Aerospace Software
-
+Ground Systems & Baseband
 Responsibilities:
 - Developed Python and Django backend systems
-- Worked on Monitoring & Control (M&C) software
+- Worked on Baseband Monitoring & Control (M&C) software
 - Built telemetry processing utilities
 - Parsed binary telemetry packets
 - Worked with TCP/IP, UDP, SNMP and WebSockets
