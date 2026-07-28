@@ -4,7 +4,6 @@ slowapi
 langchain
 langchain-community
 chromadb
-sentence-transformers
 pandas
 numpy
 pypdf2

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 
@@ -69,7 +69,10 @@ def build_vector_db():
     chunks = splitter.split_documents(docs)
     for chunk in chunks:
         print(f"chunks: {chunk.page_content[:100]}...")
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.environ.get("HF_API_TOKEN"),
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
 
     # In a real scenario, you'd check if DB exists before rebuilding
     db = Chroma.from_documents(chunks, embeddings, persist_directory=DB_DIR)
@@ -104,7 +107,10 @@ if not os.path.exists(DB_DIR) or not os.listdir(DB_DIR):
     db = build_vector_db()
 else:
     print("Loading existing vector database...")
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.environ.get("HF_API_TOKEN"),
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
     db = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
 
 if db is None:
