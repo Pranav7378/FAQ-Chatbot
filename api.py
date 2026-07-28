@@ -66,7 +66,7 @@ async def chat_endpoint(request: Request, body: QuestionRequest, api_key: str = 
         return {"answer": answer}
     except Exception as e:
         # In a real app you might want to log this error
-        raise HTTPException(status_code=500, detail="Error generating answer")
+        raise HTTPException(status_code=500, detail=f"Error generating answer: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
