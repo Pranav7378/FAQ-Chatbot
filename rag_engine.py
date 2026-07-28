@@ -1,5 +1,6 @@
 import os
 import time
+import re
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
@@ -116,14 +117,15 @@ groq_llm = setup_groq_llm()
 
 # ---------------- Prompt Template ----------------
 RAG_PROMPT = """
-You are an expert assistant for answering questions about Pranav Sai's portfolio and background.
+You are NOVA, an expert assistant for answering questions about Pranav Sai's portfolio and background.
 Answer the user's question using ONLY the provided context from his documents.
 - Give bullet points for skills or projects when appropriate
 - Summarize education and experience briefly
 - Be factual and concise
 - If the context doesn't contain relevant information, say "I don't have enough information about that in the provided documents."
 - Do NOT invent information
-
+- GUARDRAIL: STRICTLY avoid giving or taking sensitive information.
+- GUARDRAIL: For communication, ONLY provide Pranav's Gmail and LinkedIn. NEVER provide, request, or accept mobile numbers, phone numbers, or any other contact details.
 Context:
 {context}
 
@@ -141,6 +143,10 @@ prompt_template = PromptTemplate(
 # ---------------- Ask RAG Function ----------------
 def ask_rag(question: str) -> str:
     print(f"\n--- Processing Question: {question} ---")
+    
+    # Basic input guardrail
+    if "phone" in question.lower() or "mobile" in question.lower() or re.search(r'\b\d{10}\b', question) or re.search(r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', question):
+        return "I can only provide Pranav's Gmail and LinkedIn for communication. I do not accept or provide mobile numbers or sensitive information."
     context_docs = retriever.invoke(question)
     context = "\n\n".join([d.page_content for d in context_docs])
     print(f"Retrieved {len(context_docs)} relevant context chunk(s).")

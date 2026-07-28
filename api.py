@@ -18,7 +18,7 @@ load_dotenv()
 limiter = Limiter(key_func=get_remote_address)
 
 # Initialize FastAPI app
-app = FastAPI(title="Pranav Sai Portfolio API", description="FAQ Bot API for Portfolio", version="1.0.0")
+app = FastAPI(title="Pranav Sai Portfolio API", description="NOVA FAQ Bot API for Portfolio", version="1.0.0")
 
 # Add SlowAPI rate limit handler
 app.state.limiter = limiter
