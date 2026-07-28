@@ -141,8 +141,7 @@ prompt_template = PromptTemplate(
 # ---------------- Ask RAG Function ----------------
 def ask_rag(question: str) -> str:
     print(f"\n--- Processing Question: {question} ---")
-    # Retrieve top 5 relevant chunks
-    context_docs = retriever.get_relevant_documents(question)
+    context_docs = retriever.invoke(question)
     context = "\n\n".join([d.page_content for d in context_docs])
     print(f"Retrieved {len(context_docs)} relevant context chunk(s).")
 
