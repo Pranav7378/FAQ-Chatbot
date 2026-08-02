@@ -71,7 +71,7 @@ def _get_history(body: QuestionRequest) -> list:
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Pranav Sai's Portfolio API"}
+    return {"message": "Welcome to NOVA Station — Pranav Sai's AI Portfolio Assistant API. POST /chat to ask about his experience, projects, skills, and more."}
 
 @app.post("/chat", response_model=AnswerResponse)
 @limiter.limit("10/minute") # Allow max 10 questions per minute per IP
