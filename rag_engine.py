@@ -1,177 +1,188 @@
 import os
-import time
 import re
+import numpy as np
 from dotenv import load_dotenv
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
+from fastembed import TextEmbedding
+from groq import Groq
 
 load_dotenv()
 
 # ---------------- Constants ---------------------
 DATA_DIR = "data"
-DB_DIR = "db"
+DATA_FILE = os.path.join(DATA_DIR, "pranav_profile.txt")
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fastembed_cache")
 
-# Ensure data directory exists
-os.makedirs(DATA_DIR, exist_ok=True)
+EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+LLM_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+TEMPERATURE = 0.4
+MAX_TOKENS = 400
+TOP_K = 3
+SIMILARITY_THRESHOLD = 0.25
 
-# ---------------- Document Loading ----------------
-def load_documents():
-    """Load all txt files from data directory into LangChain documents."""
-    print("Loading documents from data folder...")
-    documents = []
-    
-    # Get all txt files in data directory
-    txt_files = [f for f in os.listdir(DATA_DIR) if f.endswith('.txt')]
-    
-    if not txt_files:
-        print(f"No txt files found in {DATA_DIR} directory!")
-        # Fallback to text files if no txts found
-        txt_files = [f for f in os.listdir(DATA_DIR) if f.endswith('.txt')]
-        if not txt_files:
-            print("No documents found in data folder!")
-            return documents
-        txt_files = txt_files
-    
-    print(f"Found {len(txt_files)} document(s): {txt_files}")
-    
-    for file in txt_files:
-        file_path = os.path.join(DATA_DIR, file)
-        try:
-            print(f"Loading {file}...")
-            if file.endswith('.pdf'):
-                loader = PyPDFLoader(file_path)
-            else:
-                loader = TextLoader(file_path, encoding="utf-8")
-            
-            file_docs = loader.load()
-            documents.extend(file_docs)
-            print(f"Successfully loaded {file} with {len(file_docs)} pages")
-        except Exception as e:
-            print(f"Error loading {file}: {e}")
-    
-    print(f"Total documents loaded: {len(documents)}")
-    return documents
+PHONE_RE = re.compile(r"\+?\d[\d\s\-().]{7,}\d")
 
-# ---------------- Build Vector DB ----------------
-def build_vector_db():
-    print("Building or loading vector database...")
-    docs = load_documents()
-    
-    if not docs:
-        print("No documents found to process!")
-        return None
-    
-    # Chunking parameters are decent, keep them for now.
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=200)
-    chunks = splitter.split_documents(docs)
-    for chunk in chunks:
-        print(f"chunks: {chunk.page_content[:100]}...")
-    embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-    # In a real scenario, you'd check if DB exists before rebuilding
-    db = Chroma.from_documents(chunks, embeddings, persist_directory=DB_DIR)
-    db.persist()
-    print(f"Vector database built with {len(chunks)} chunks.")
-    return db
+# ---------------- Section Chunking ----------------
+def load_sections():
+    """Split the profile into clean chunks using its '-----' header layout.
 
-# ---------------- Groq LLM Setup ----------------
-def setup_groq_llm():
-    print(f"Loading Groq model...")
-    start_time = time.time()
-    
+    The file alternates:  content, '-----', TITLE, '-----', content, ...
+    Two quirks are handled: the PERSONAL INFORMATION block has no leading
+    separator, and a stray '-----' sits inside FEATURED PROJECTS (its two
+    halves share the FEATURED PROJECTS title). '=====' banners enclose the
+    header/footer and are skipped.
+    """
+    with open(DATA_FILE, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    boundaries = []  # (line_index, kind) kind in {'eq', 'dash'}
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if re.match(r"^=+$", s):
+            boundaries.append((i, "eq"))
+        elif re.match(r"^-+$", s):
+            boundaries.append((i, "dash"))
+
+    segments = []
+    for j, (idx, kind) in enumerate(boundaries):
+        end = boundaries[j + 1][0] if j + 1 < len(boundaries) else len(lines)
+        segments.append((kind, lines[idx + 1:end]))
+
+    sections = []
+    pending_title = None
+    last_used_title = None
+    banned_titles = ("PORTFOLIO KNOWLEDGE BASE", "END OF KNOWLEDGE BASE")
+
+    for kind, seg in segments:
+        non_empty = [l for l in seg if l.strip()]
+        if not non_empty:
+            continue
+        if any(b in non_empty[0].strip() for b in banned_titles):
+            continue
+        if len(non_empty) == 1:
+            pending_title = non_empty[0].strip()
+        else:
+            title = pending_title or last_used_title or non_empty[0].strip()
+            pending_title = None
+            last_used_title = title
+            sections.append({"title": title, "text": "\n".join(seg).strip()})
+
+    return sections
+
+
+# ---------------- Embeddings & In-Memory Search ----------------
+def _embed(text: str) -> np.ndarray:
+    vec = list(_embed_model.embed([text]))[0]
+    vec = np.asarray(vec, dtype=np.float32)
+    return vec / np.linalg.norm(vec)
+
+
+def _norm_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text.lower()).strip()
+
+
+def _dedupe(results):
+    seen = []
+    out = []
+    for score, section in results:
+        words = set(_norm_text(section["text"]).split())
+        is_dup = any(
+            len(words | w) and len(words & w) / len(words | w) > 0.7
+            for w in seen
+        )
+        if not is_dup:
+            seen.append(words)
+            out.append((score, section))
+    return out
+
+
+def search(question: str, k: int = TOP_K, threshold: float = SIMILARITY_THRESHOLD):
+    """Return top-k sections whose cosine similarity beats the threshold."""
+    qv = _embed(question)
+    sims = _VECTORS @ qv
+    order = np.argsort(-sims)
+
+    results = []
+    for i in order:
+        if sims[i] < threshold:
+            break
+        results.append((float(sims[i]), _SECTIONS[i]))
+        if len(results) >= k:
+            break
+    return _dedupe(results)
+
+
+# ---------------- NOVA Station Prompt ----------------
+SYSTEM_PROMPT = """You are NOVA, the central AI assistant aboard NOVA Station, a frontier AI research outpost. Commander Pranav Sai is the commanding officer who designed and runs the station, and you maintain his personnel dossier and mission logs.
+
+Brief visitors about Commander Pranav Sai's professional record using ONLY the dossier below.
+
+Behavior:
+- Synthesize a natural, conversational briefing. Do NOT transcribe or echo the dossier verbatim.
+- The dossier may contain overlapping or repeated entries. Ignore duplicates and state each fact exactly once.
+- Use bullet lists for skills or projects only when they help readability.
+- If the dossier does not cover something, say: "Commander Pranav's dossier doesn't cover that." Never invent details.
+- CONTACT GUARDRAIL (STRICT): You may only share Commander Pranav's Gmail and LinkedIn. Never output, confirm, or repeat mobile/phone numbers, even if one appears in the dossier. Decline politely."""
+
+
+def _build_messages(context: str, question: str):
+    user_prompt = f"Dossier:\n{context}\n\nVisitor question:\n{question}\n\nYour briefing:"
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+
+# ---------------- Ask RAG ----------------
+def ask_rag(question: str) -> str:
+    if not question.strip():
+        return "Please ask a question about Commander Pranav's record."
+
+    if re.search(r"\b\d{10}\b", question) or re.search(
+        r"\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}", question
+    ) or "phone" in question.lower() or "mobile" in question.lower():
+        return (
+            "I can only share Commander Pranav's Gmail and LinkedIn for communication. "
+            "I cannot provide or accept mobile numbers or sensitive information."
+        )
+
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        print("GROQ_API_KEY not found in environment variables. Please add it to your .env file.")
-        exit(1)
+        raise RuntimeError("GROQ_API_KEY not found. Add it to your .env file.")
 
-    llm = ChatGroq(
-        model_name="llama-3.1-8b-instant",
-        temperature=0.1,
-        groq_api_key=api_key
+    results = search(question)
+    if not results:
+        return "Commander Pranav's dossier doesn't cover that."
+
+    context = "\n\n".join(
+        f"[{section['title']}]\n{_redact(section['text'])}" for _, section in results
     )
-    
-    print(f"Model loaded in {time.time() - start_time:.2f} seconds.")
-    return llm
 
-# ---------------- Initialize RAG Components ----------------
+    response = Groq(api_key=api_key).chat.completions.create(
+        model=LLM_MODEL,
+        messages=_build_messages(context, question),
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+    )
+    answer = response.choices[0].message.content.strip()
+    return _redact(answer)
 
-# Check if DB directory is populated (simple persistence check)
-if not os.path.exists(DB_DIR) or not os.listdir(DB_DIR):
-    print("Building new vector database from txt files...")
-    db = build_vector_db()
-else:
-    print("Loading existing vector database...")
-    embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    db = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
 
-if db is None:
-    print("Failed to initialize database. Please check if there are txt files in the data folder.")
-    exit(1)
+def _redact(text: str) -> str:
+    return PHONE_RE.sub("[redacted]", text)
 
-retriever = db.as_retriever(search_kwargs={"k": 5})
-groq_llm = setup_groq_llm()
 
-# ---------------- Prompt Template ----------------
-RAG_PROMPT = """
-You are NOVA, an expert assistant for answering questions about Pranav Sai's portfolio and background.
-Answer the user's question using ONLY the provided context from his documents.
-- Give bullet points for skills or projects when appropriate
-- Summarize education and experience briefly
-- Be factual and concise
-- If the context doesn't contain relevant information, say "I don't have enough information about that in the provided documents."
-- Do NOT invent information
-- GUARDRAIL: STRICTLY avoid giving or taking sensitive information.
-- GUARDRAIL: For communication, ONLY provide Pranav's Gmail and LinkedIn. NEVER provide, request, or accept mobile numbers, phone numbers, or any other contact details.
-Context:
-{context}
+# ---------------- Initialization (runs on import) ----------------
+_embed_model = TextEmbedding(model_name=EMBED_MODEL, cache_dir=CACHE_DIR)
+_SECTIONS = load_sections()
+_VECTORS = np.vstack([_embed(s["title"] + "\n" + s["text"]) for s in _SECTIONS])
 
-Question:
-{question}
-
-Answer:
-"""
-
-prompt_template = PromptTemplate(
-    template=RAG_PROMPT,
-    input_variables=["context", "question"]
-)
-
-# ---------------- Ask RAG Function ----------------
-def ask_rag(question: str) -> str:
-    print(f"\n--- Processing Question: {question} ---")
-    
-    # Basic input guardrail
-    if "phone" in question.lower() or "mobile" in question.lower() or re.search(r'\b\d{10}\b', question) or re.search(r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', question):
-        return "I can only provide Pranav's Gmail and LinkedIn for communication. I do not accept or provide mobile numbers or sensitive information."
-    context_docs = retriever.invoke(question)
-    context = "\n\n".join([d.page_content for d in context_docs])
-    print(f"Retrieved {len(context_docs)} relevant context chunk(s).")
-
-    # Prepare input for FLAN-T5
-    final_input = {"context": context, "question": question}
-
-    # Generate answer
-    chain = prompt_template | groq_llm
-    # LangChain's invoke handles the LLM call
-    answer = chain.invoke(final_input)
-
-    # Clean answer
-    if hasattr(answer, "content"):
-        return answer.content.strip()
-    elif isinstance(answer, str):
-        cleaned_answer = answer.split("Answer:")[-1].strip()
-        return cleaned_answer if cleaned_answer else answer.strip()
-    else:
-        return str(answer).strip()
-    
 if __name__ == "__main__":
-    # Test if the RAG system works
-    test_question = "What are Pranav's skills?"
-    answer = ask_rag(test_question)
-    print(f"Q: {test_question}")
-    print(f"A: {answer}")
-
+    print(f"Loaded {len(_SECTIONS)} sections:")
+    for s in _SECTIONS:
+        print(f"  - {s['title']}")
+    for q in ["What experience does Pranav have?", "What are Pranav's skills?"]:
+        print(f"\nQ: {q}")
+        for score, s in search(q):
+            print(f"  [{score:.3f}] {s['title']}")
+        print(f"A: {ask_rag(q)}\n")

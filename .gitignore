@@ -1,6 +1,7 @@
 venv/
 .env
 db/
+fastembed_cache/
 __pycache__/
 *.pyc
 .pytest_cache/

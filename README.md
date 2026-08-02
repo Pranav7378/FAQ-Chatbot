@@ -1,43 +1,48 @@
-# Pranav Sai Portfolio FAQ Bot
+# NOVA Station FAQ Bot
 
-A robust Retrieval-Augmented Generation (RAG) backend built using FastAPI and LangChain, integrating with Groq's high-performance LLM API. This backend provides the answers for a portfolio FAQ chat interface.
+A lightweight Retrieval-Augmented Generation (RAG) backend for **Pranav Sai's** portfolio, built with FastAPI and Groq.
+
+**NOVA** is the central AI assistant aboard **NOVA Station**, where Commander Pranav Sai runs operations. NOVA briefs visitors about the Commander's professional record — synthesizing natural answers instead of echoing documents.
 
 ## Features
-- **FastAPI**: Asynchronous, high-performance web framework.
-- **LangChain & ChromaDB**: Chunking, embeddings, and vector search over a folder of `.txt` or `.pdf` files.
-- **Groq Integration**: Incredibly fast inference utilizing `llama-3.1-8b-instant`.
-- **Security**: Endpoint protected via `X-API-Key`.
-- **Rate Limiting**: Prevent abuse using `slowapi` (IP-based rate limiting).
-- **Render Ready**: Includes a `render.yaml` for 1-click deployments as a web service.
+
+- **Persona**: Sci-fi space-station assistant personality with strict contact guardrails (Gmail + LinkedIn only, never phone numbers).
+- **RAG**: Section-aware chunking of `data/pranav_profile.txt` + in-memory numpy cosine search (no ChromaDB, no heavy vector store).
+- **Fast & free**: `fastembed` (ONNX, ~90 MB) for embeddings and Groq's free `llama-3.3-70b-versatile` for generation.
+- **Free-tier friendly**: Tiny RAM footprint, embeddings pre-warmed at build time so cold starts stay fast.
+- **Security**: `X-API-Key` auth + IP-based rate limiting (10 req/min).
+- **Render ready**: Ships with `render.yaml`.
 
 ## Getting Started Locally
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Pranav7378/FAQ-Chatbot.git
-   cd FAQ-Chatbot
-   ```
-
-2. **Create a virtual environment and install dependencies:**
+1. **Create a virtual environment and install dependencies:**
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   venv\Scripts\activate        # Windows
    pip install -r requirements.txt
    ```
 
-3. **Set up Environment Variables:**
-   Create a `.env` file in the root directory:
+2. **Set up Environment Variables** (`.env`):
    ```ini
    GROQ_API_KEY=your_groq_api_key
    API_SECRET_KEY=your_custom_secret_key_for_frontend
+   GROQ_MODEL=llama-3.3-70b-versatile   # optional override
    ```
 
-4. **Run the Server:**
+3. **Run the Server:**
    ```bash
    python api.py
-   # Or using uvicorn directly:
-   # uvicorn api:app --reload
+   # or: uvicorn api:app --reload
    ```
 
+The first run downloads the embedding model into `fastembed_cache/` (git-ignored).
+
+## Test the RAG engine directly
+
+```bash
+python rag_engine.py
+```
+
 ## API Documentation
-Once running, interactive API documentation is automatically provided by FastAPI at `http://localhost:8000/docs`.
+
+Once running, interactive API docs are available at `http://localhost:8000/docs`.

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from starlette.concurrency import run_in_threadpool
 
 from rag_engine import ask_rag
 
@@ -62,7 +63,7 @@ async def chat_endpoint(request: Request, body: QuestionRequest, api_key: str = 
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     
     try:
-        answer = ask_rag(body.question)
+        answer = await run_in_threadpool(ask_rag, body.question)
         return {"answer": answer}
     except Exception as e:
         # In a real app you might want to log this error

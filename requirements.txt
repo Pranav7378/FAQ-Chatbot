@@ -1,13 +1,7 @@
 fastapi
 uvicorn[standard]
 slowapi
-langchain
-langchain-community
-chromadb
-pandas
-numpy
-pypdf2
-langchain-groq
 python-dotenv
-langchain-text-splitters
+groq
 fastembed
+numpy
