@@ -1,14 +1,15 @@
 # NOVA Station FAQ Bot
 
-Hey! This is the backend for my portfolio FAQ bot. You ask about my work, experience, skills, projects — and **NOVA** answers like the on-board AI of a space station where I'm the Commander.
+Hey! This is the backend for my portfolio FAQ bot. You ask about my work, experience, skills, projects — and **NOVA** answers as my AI Portfolio Assistant with a "NOVA Station" space-station theme.
 
 It's a small RAG setup: I wrote my portfolio into `data/pranav_profile.txt`, split it into clean sections, embed them once at startup, and retrieve the most relevant bits for each question before asking Groq to phrase an answer in NOVA's voice.
 
 ## The vibe
 
-- **NOVA** is the central AI aboard **NOVA Station**. I (Pranav Sai) am the Commander.
-- She talks like a friendly station AI briefing visitors about the Commander's record — no robotic copy-pasting of the resume.
-- She's **context-aware**: she remembers the conversation, so she can answer "who are u?", greet visitors, and follow up on what they were just asking about ("want me to walk you through one of his projects?").
+- **NOVA** is my AI Portfolio Assistant, styled after a futuristic station AI. **NOVA Station** is a *creative interface* — a virtual station representing my engineering journey — not a real place.
+  - Projects = "missions", Blogs = "research logs", Architecture diagrams = "blueprints", Certificates = "credentials", Experience = "career timeline".
+- She's friendly and conversational (think JARVIS meets a portfolio assistant), but always truthful and grounded — she answers from my portfolio and never exaggerates or invents achievements.
+- She's **context-aware**: she remembers the conversation, so she can answer "who are u?", greet visitors with suggested questions, and follow up on what they were just asking about.
 - She's strict about contact info: only my Gmail and LinkedIn. Phone numbers never get shared, even if they're in the file.
 
 ## Tech stack
@@ -97,4 +98,4 @@ Edit `data/pranav_profile.txt` (keep the `----- SECTION TITLE -----` format) and
 
 - **`401 invalid_api_key`** — the `GROQ_API_KEY` is wrong or expired. Grab a new one from the Groq console.
 - **`GROQ_API_KEY not found`** — `.env` is missing or not being loaded.
-- **"doesn't cover that" answers** — the question didn't beat the similarity threshold (or the profile really doesn't mention it). Try rephrasing.
+- **"I don't currently have enough information to answer that accurately."** — the question didn't beat the similarity threshold (or the profile really doesn't mention it). Try rephrasing.
