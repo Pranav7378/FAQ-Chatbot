@@ -1,111 +1,74 @@
 # NOVA Station FAQ Bot
 
-A lightweight Retrieval-Augmented Generation (RAG) backend for **Pranav Sai's** portfolio, built with FastAPI and Groq.
+Hey! This is the backend for my portfolio FAQ bot. You ask about my work, experience, skills, projects — and **NOVA** answers like the on-board AI of a space station where I'm the Commander.
 
-**NOVA** is the central AI assistant aboard **NOVA Station**, a frontier AI research outpost where Commander Pranav Sai runs operations. NOVA briefs visitors about the Commander's professional record — synthesizing natural, conversational answers instead of echoing documents.
+It's a small RAG setup: I wrote my portfolio into `data/pranav_profile.txt`, split it into clean sections, embed them once at startup, and retrieve the most relevant bits for each question before asking Groq to phrase an answer in NOVA's voice.
 
-## How it works
+## The vibe
 
-```
-Visitor question
-      │
-      ▼
- ask_rag(question)                 rag_engine.py
-      │
-      ├─ Guardrail: reject phone/sensitive requests before any retrieval
-      ▼
- Search                             13 profile sections are embedded once at
-      │                             startup (fastembed / all-MiniLM-L6-v2, ONNX).
-      ▼                             Cosine top-k (k=3, threshold 0.25) + Jaccard dedupe.
- Retrieve relevant sections
-      │
-      ▼
- Context: phone number stripped from every injected chunk
-      │
-      ▼
- Groq (llama-3.3-70b-versatile)     System prompt = NOVA persona + guardrails
-      │                             User prompt = dossier + question
-      ▼
- Answer: phone numbers redacted from output too
-```
+- **NOVA** is the central AI aboard **NOVA Station**. I (Pranav Sai) am the Commander.
+- She talks like a friendly station AI briefing visitors about the Commander's record — no robotic copy-pasting of the resume.
+- She's strict about contact info: only my Gmail and LinkedIn. Phone numbers never get shared, even if they're in the file.
 
-## Features
+## Tech stack
 
-- **Persona**: Sci-fi space-station assistant (NOVA Station) with strict contact guardrails — Gmail and LinkedIn only, phone numbers are never provided, confirmed, or repeated.
-- **RAG**: Section-aware chunking of `data/pranav_profile.txt` + in-memory numpy cosine search. No ChromaDB, no LangChain, no heavy vector store.
-- **Fast & free**: `fastembed` (ONNX, ~90 MB) for embeddings and Groq's free `llama-3.3-70b-versatile` for generation. Both are free — no paid APIs needed.
-- **Free-tier friendly**: Tiny RAM footprint (fits Render's 512 MB), embedding model pre-warmed at build time so cold starts only load into memory.
-- **Security**: `X-API-Key` auth + IP-based rate limiting (10 req/min).
-- **Render ready**: Ships with `render.yaml`.
+- **FastAPI** + **Groq** (`llama-3.3-70b-versatile`) — both free to use.
+- **fastembed** (`all-MiniLM-L6-v2`) for embeddings — tiny ONNX model, runs anywhere.
+- **numpy** cosine search instead of a heavy vector DB — the profile is one small file, no need for ChromaDB.
+- Built for **Render's free tier** — fits in 512 MB, model is pre-warmed at build time so cold starts are quick.
 
-## Getting Started Locally
-
-1. **Create a virtual environment and install dependencies:**
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate        # Windows
-   pip install -r requirements.txt
-   ```
-
-2. **Set up Environment Variables** (`.env`):
-   ```ini
-   GROQ_API_KEY=your_groq_api_key
-   API_SECRET_KEY=your_custom_secret_key_for_frontend
-   GROQ_MODEL=llama-3.3-70b-versatile   # optional override
-   ```
-
-3. **Run the Server:**
-   ```bash
-   python api.py
-   # or: uvicorn api:app --reload
-   ```
-
-The first run downloads the embedding model into `fastembed_cache/` (git-ignored).
-
-## Test the RAG engine directly
+## Run it locally
 
 ```bash
-python rag_engine.py
+python -m venv venv
+venv\Scripts\activate        # Windows
+pip install -r requirements.txt
 ```
 
-This prints the parsed sections, retrieval scores, and a live answer for sample questions.
+Create a `.env` file:
 
-## API Usage
+```ini
+GROQ_API_KEY=your_groq_api_key
+API_SECRET_KEY=your_secret_key_for_the_api
+GROQ_MODEL=llama-3.3-70b-versatile   # optional
+```
 
-Interactive docs: `http://localhost:8000/docs`
+Then:
+
+```bash
+python api.py
+# or: uvicorn api:app --reload
+```
+
+First run downloads the embedding model into `fastembed_cache/` (git-ignored).
+
+## Try it
+
+```bash
+python rag_engine.py        # runs the RAG engine directly
+```
+
+Or hit the API:
 
 ```bash
 curl -X POST http://localhost:8000/chat \
-  -H "X-API-Key: your_api_secret_key" \
+  -H "X-API-Key: your_secret_key" \
   -H "Content-Type: application/json" \
   -d '{"question": "What experience does Pranav have?"}'
 ```
 
-Response:
+Docs are at `http://localhost:8000/docs` once it's running.
 
-```json
-{ "answer": "Commander Pranav is currently a Junior AI Engineer at Sita Corp in Hyderabad..." }
-```
+## Deploying
 
-`test_api.py` also runs a quick check of auth + a valid request against a running server.
+`render.yaml` is included — point a Render web service at this repo, set the two env vars, done. On free tier it sleeps after ~15 min idle; the first request after that takes a few extra seconds to wake up.
 
-## Deploying to Render (free tier)
+## Updating my profile
 
-1. Create a new Web Service from this repo (or use `render.yaml`).
-2. Set env vars in the dashboard: `GROQ_API_KEY` and `API_SECRET_KEY` (Render will prompt you for these; they're not committed).
-3. The `buildCommand` pre-downloads the embedding model into `fastembed_cache/`, which ships in the deploy image — so free-tier spin-downs don't trigger a re-download; cold starts only reload the model into RAM.
-
-Free-tier notes:
-- The instance sleeps after ~15 min of inactivity; the first request after sleep has a few seconds of cold start.
-- The `db/` directory is **not** used anymore; the knowledge base is re-parsed from `data/pranav_profile.txt` on every boot, so edits to the profile take effect on the next deploy.
-
-## Updating the knowledge base
-
-Edit `data/pranav_profile.txt` (keep the existing `----- SECTION TITLE -----` layout) and redeploy. NOVA will answer from the updated dossier.
+Edit `data/pranav_profile.txt` (keep the `----- SECTION TITLE -----` format) and redeploy. NOVA reads it fresh on every boot.
 
 ## Troubleshooting
 
-- **`401 invalid_api_key`** on every request → your `GROQ_API_KEY` is wrong or expired. Verify it with any Groq playground request.
-- **`GROQ_API_KEY not found`** → the `.env` file is missing the key (or isn't being loaded).
-- **Slow first request after deploy** → the embedding model may still be downloading; check the build logs that `fastembed_cache/` was populated.
-- **Answers that say "doesn't cover that"** → the question falls below the retrieval threshold; try rephrasing, or the profile genuinely lacks that info.
+- **`401 invalid_api_key`** — the `GROQ_API_KEY` is wrong or expired. Grab a new one from the Groq console.
+- **`GROQ_API_KEY not found`** — `.env` is missing or not being loaded.
+- **"doesn't cover that" answers** — the question didn't beat the similarity threshold (or the profile really doesn't mention it). Try rephrasing.
