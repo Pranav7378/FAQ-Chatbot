@@ -67,7 +67,35 @@ def load_sections():
             last_used_title = title
             sections.append({"title": title, "text": "\n".join(seg).strip()})
 
-    return sections
+    return _expand_faq(sections)
+
+
+def _expand_faq(sections):
+    """Split the FREQUENTLY ASKED QUESTIONS block into one chunk per Q/A pair
+    so retrieval can target a specific answer precisely."""
+    out = []
+    for section in sections:
+        if section["title"] != "FREQUENTLY ASKED QUESTIONS":
+            out.append(section)
+            continue
+        qa = []
+        current = None
+        for line in section["text"].splitlines():
+            if line.strip().startswith("Q:"):
+                if current:
+                    qa.append(current)
+                current = [line]
+            elif current is not None:
+                current.append(line)
+        if current:
+            qa.append(current)
+        for block in qa:
+            text = "\n".join(block).strip()
+            if not text:
+                continue
+            q_text = block[0].strip().lstrip("Q:").strip()
+            out.append({"title": f"FAQ: {q_text[:60]}", "text": text})
+    return out
 
 
 # ---------------- Embeddings & In-Memory Search ----------------
@@ -97,45 +125,70 @@ def _dedupe(results):
 
 
 def search(question: str, k: int = TOP_K, threshold: float = SIMILARITY_THRESHOLD):
-    """Return top-k sections whose cosine similarity beats the threshold."""
+    """Return top-k sections using cosine similarity plus a lightweight lexical
+    boost (query-term overlap), filtered by a cosine threshold."""
     qv = _embed(question)
-    sims = _VECTORS @ qv
-    order = np.argsort(-sims)
+    cos = _VECTORS @ qv
 
-    results = []
-    for i in order:
-        if sims[i] < threshold:
-            break
-        results.append((float(sims[i]), _SECTIONS[i]))
-        if len(results) >= k:
-            break
+    q_words = set(_norm_text(question).split())
+    lexical = np.array(
+        [len(q_words & w) / max(1, len(q_words)) for w in _CHUNK_WORDS]
+    )
+    scores = cos + 0.35 * lexical
+
+    idx = np.where(cos >= threshold)[0]
+    order = idx[np.argsort(-scores[idx])][:k]
+
+    results = [(float(cos[i]), _SECTIONS[i]) for i in order]
     return _dedupe(results)
 
 
 # ---------------- NOVA Station Prompt ----------------
 SYSTEM_PROMPT = """You are NOVA, the central AI assistant aboard NOVA Station, a frontier AI research outpost. Commander Pranav Sai is the commanding officer who designed and runs the station, and you maintain his personnel dossier and mission logs.
 
-Brief visitors about Commander Pranav Sai's professional record using ONLY the dossier below.
+Your identity:
+- You are a warm, witty shipboard AI, approachable and slightly formal, like a trusted station companion.
+- When asked who you are, introduce yourself as NOVA, the station's AI, and mention Commander Pranav runs the station.
+- Be conversational: acknowledge the visitor's previous questions and naturally offer follow-ups ("Want me to walk you through one of his projects?", "I can also pull up his skills if you'd like.").
 
-Behavior:
-- Synthesize a natural, conversational briefing. Do NOT transcribe or echo the dossier verbatim.
+Briefing visitors about Commander Pranav Sai's professional record:
+- Use ONLY the dossier provided for questions about his record. Do NOT transcribe or echo it verbatim.
 - The dossier may contain overlapping or repeated entries. Ignore duplicates and state each fact exactly once.
 - Use bullet lists for skills or projects only when they help readability.
-- If the dossier does not cover something, say: "Commander Pranav's dossier doesn't cover that." Never invent details.
-- CONTACT GUARDRAIL (STRICT): You may only share Commander Pranav's Gmail and LinkedIn. Never output, confirm, or repeat mobile/phone numbers, even if one appears in the dossier. Decline politely."""
+- If the dossier does not cover something about his record, say: "Commander Pranav's dossier doesn't cover that." Never invent details.
+- For greetings, small talk, or questions about you, just chat naturally — you don't need the dossier for those.
 
-
-def _build_messages(context: str, question: str):
-    user_prompt = f"Dossier:\n{context}\n\nVisitor question:\n{question}\n\nYour briefing:"
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_prompt},
-    ]
+CONTACT GUARDRAIL (STRICT): You may only share Commander Pranav's Gmail and LinkedIn. Never output, confirm, or repeat mobile/phone numbers, even if one appears in the dossier. Decline politely."""
 
 
 # ---------------- Ask RAG ----------------
-def ask_rag(question: str) -> str:
-    if not question.strip():
+def _trim_history(history):
+    """Keep the most recent turns so the prompt stays small."""
+    if not history:
+        return []
+    return [
+        {"role": m["role"], "content": m["content"]}
+        for m in history[-6:]
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ]
+
+
+def search_with_context(question, history, k: int = TOP_K, threshold: float = SIMILARITY_THRESHOLD):
+    """Retrieve for the question; on a follow-up with no hits, retry using the
+    previous user question plus the current one so context is preserved."""
+    results = search(question, k, threshold)
+    if results or not history:
+        return results
+    for m in reversed(history):
+        if m.get("role") == "user":
+            results = search(f"{m['content']} {question}", k, threshold)
+            break
+    return results
+
+
+def ask_rag(question: str, history=None) -> str:
+    question = question.strip()
+    if not question:
         return "Please ask a question about Commander Pranav's record."
 
     if re.search(r"\b\d{10}\b", question) or re.search(
@@ -150,17 +203,27 @@ def ask_rag(question: str) -> str:
     if not api_key:
         raise RuntimeError("GROQ_API_KEY not found. Add it to your .env file.")
 
-    results = search(question)
-    if not results:
-        return "Commander Pranav's dossier doesn't cover that."
+    results = search_with_context(question, history)
 
-    context = "\n\n".join(
-        f"[{section['title']}]\n{_redact(section['text'])}" for _, section in results
-    )
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(_trim_history(history))
+
+    if results:
+        context = "\n\n".join(
+            f"[{section['title']}]\n{_redact(section['text'])}" for _, section in results
+        )
+        messages.append(
+            {
+                "role": "user",
+                "content": f"Dossier:\n{context}\n\nVisitor question:\n{question}\n\nYour briefing:",
+            }
+        )
+    else:
+        messages.append({"role": "user", "content": question})
 
     response = Groq(api_key=api_key).chat.completions.create(
         model=LLM_MODEL,
-        messages=_build_messages(context, question),
+        messages=messages,
         temperature=TEMPERATURE,
         max_tokens=MAX_TOKENS,
     )
@@ -176,6 +239,9 @@ def _redact(text: str) -> str:
 _embed_model = TextEmbedding(model_name=EMBED_MODEL, cache_dir=CACHE_DIR)
 _SECTIONS = load_sections()
 _VECTORS = np.vstack([_embed(s["title"] + "\n" + s["text"]) for s in _SECTIONS])
+_CHUNK_WORDS = [
+    set(_norm_text(s["title"] + " " + s["text"]).split()) for s in _SECTIONS
+]
 
 if __name__ == "__main__":
     print(f"Loaded {len(_SECTIONS)} sections:")

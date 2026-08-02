@@ -8,6 +8,7 @@ It's a small RAG setup: I wrote my portfolio into `data/pranav_profile.txt`, spl
 
 - **NOVA** is the central AI aboard **NOVA Station**. I (Pranav Sai) am the Commander.
 - She talks like a friendly station AI briefing visitors about the Commander's record — no robotic copy-pasting of the resume.
+- She's **context-aware**: she remembers the conversation, so she can answer "who are u?", greet visitors, and follow up on what they were just asking about ("want me to walk you through one of his projects?").
 - She's strict about contact info: only my Gmail and LinkedIn. Phone numbers never get shared, even if they're in the file.
 
 ## Tech stack
@@ -58,6 +59,31 @@ curl -X POST http://localhost:8000/chat \
 ```
 
 Docs are at `http://localhost:8000/docs` once it's running.
+
+### Conversation memory
+
+Send a `session_id` to keep the conversation on the server, or pass the full `history` yourself (stateless, survives restarts):
+
+```json
+{
+  "question": "tell me more about that one",
+  "session_id": "abc123"
+}
+```
+
+or
+
+```json
+{
+  "question": "tell me more about that one",
+  "history": [
+    {"role": "user", "content": "What projects has Pranav built?"},
+    {"role": "assistant", "content": "He built a Crop Recommendation System and a Movie Recommendation System."}
+  ]
+}
+```
+
+The response includes the `session_id` you can reuse for the next turn. If a follow-up question doesn't match anything on its own, NOVA reuses your earlier question to find the right context.
 
 ## Deploying
 

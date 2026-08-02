@@ -1,4 +1,7 @@
 import os
+from collections import defaultdict, deque
+from uuid import uuid4
+from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
@@ -48,9 +51,23 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
 
 class QuestionRequest(BaseModel):
     question: str
+    session_id: Optional[str] = None
+    history: Optional[List[dict]] = None
 
 class AnswerResponse(BaseModel):
     answer: str
+    session_id: Optional[str] = None
+
+# In-memory conversation store (per session, capped at ~6 turns).
+# Client-supplied `history` is used when present, so it also survives restarts.
+SESSION_STORE = defaultdict(lambda: deque(maxlen=12))
+
+def _get_history(body: QuestionRequest) -> list:
+    if body.history is not None:
+        return body.history
+    if body.session_id:
+        return list(SESSION_STORE[body.session_id])
+    return []
 
 @app.get("/")
 def read_root():
@@ -63,8 +80,14 @@ async def chat_endpoint(request: Request, body: QuestionRequest, api_key: str = 
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     
     try:
-        answer = await run_in_threadpool(ask_rag, body.question)
-        return {"answer": answer}
+        history = _get_history(body)
+        answer = await run_in_threadpool(ask_rag, body.question, history)
+
+        session_id = body.session_id or uuid4().hex
+        SESSION_STORE[session_id].append({"role": "user", "content": body.question})
+        SESSION_STORE[session_id].append({"role": "assistant", "content": answer})
+
+        return {"answer": answer, "session_id": session_id}
     except Exception as e:
         # In a real app you might want to log this error
         raise HTTPException(status_code=500, detail=f"Error generating answer: {str(e)}")
